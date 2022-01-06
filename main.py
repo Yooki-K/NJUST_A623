@@ -53,13 +53,13 @@ def login(sender, data):
     if os.path.exists(cookie_path):
         with open(cookie_path, 'r', encoding='utf-8') as f:
             cookie = json.load(f)
-            if 'zhlg' in cookie:
-                lg = zhlg.zhlg(get_value('name'), get_value('pwd_2'), cookie['zhlg'])
-                if lg.islogin:
-                    print('智慧理工 cookie登录成功')
-                else:
-                    cookie.pop('zhlg')
-                    lg = None
+            # if 'zhlg' in cookie:
+            #     lg = zhlg.zhlg(get_value('name'), get_value('pwd_2'), cookie['zhlg'])
+            #     if lg.islogin:
+            #         print('智慧理工 cookie登录成功')
+            #     else:
+            #         cookie.pop('zhlg')
+            #         lg = None
             if 'jwc' in cookie:
                 jwc = jiaowuchu.jwc(get_value('name'), get_value('pwd_2'), cookie['jwc'])
                 if jwc.islogin:
@@ -92,9 +92,9 @@ def login(sender, data):
             if jwc.islogin and jwc.ck is not None:
                 wjson('jwc', jwc.ck)
     delete_item('提示')
-    if not lg.islogin:
-        mesbox('错误', '智慧理工登录失败', -1)
-        return
+    # if not lg.islogin:
+    #     mesbox('错误', '智慧理工登录失败', -1)
+    #     return
     if not jwc.islogin:
         mesbox('错误', '教务处登录失败', -1)
         return

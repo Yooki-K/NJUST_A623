@@ -99,10 +99,14 @@ class zhlg:
         return r.text.encode('gbk', 'ignore').decode('gbk')
 
     def hand_value(self, t):
-        m = re.findall("value=\".*\"", t)[0]
-        m = m.replace("value=", '')
-        m = m.replace("\"", '')
-        return m
+        r = re.findall("value=\".*\"", t)
+        if len(r) > 0:
+            m = re.findall("value=\".*\"", t)[0]
+            m = m.replace("value=", '')
+            m = m.replace("\"", '')
+            return m
+        else:
+            return ''
 
     def encode_js(self):
         f = open('resource\\need.js', 'r', encoding='utf-8')

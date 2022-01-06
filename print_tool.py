@@ -5,6 +5,8 @@ import sys
 from datetime import datetime, timedelta
 from uuid import uuid4 as uid
 import socket
+import re
+import openpyxl as xl
 
 
 # 安卓手机只能提前提醒10分钟，需要手动修改。
@@ -154,3 +156,111 @@ X-APPLE-TRAVEL-ADVISORY-BEHAVIOR:AUTOMATIC\n{_alarm_base}END:VEVENT\n'''
             f.write("\nEND:VCALENDAR")
             print(f"尾部信息写入成功！")
             f.close()
+
+
+# 课表exel表格生成 用于适配华为服务一课表
+class CreateExcel:
+    def __init__(self, soup):
+        data = self.parseKb(soup)
+        self.createXlsx(data)
+
+    @staticmethod
+    def toWeek(s: str) -> int:
+        if s == '一':
+            return 1
+        elif s == '二':
+            return 2
+        elif s == '三':
+            return 3
+        elif s == '四':
+            return 4
+        elif s == '五':
+            return 5
+        elif s == '六':
+            return 6
+        elif s == '日' or s == '天':
+            return 7
+
+    def toTime(self, s: list) -> list:
+        timeList = []
+        for x in s:
+            timeList.append([self.toWeek(x[0]), int(x[1]), int(x[2])])
+        return timeList
+
+    def parseKc(self, kc_) -> dict:
+        attrs = kc_.find_all('td')
+        name = attrs[3].text
+        teacher = attrs[4].text
+        date = attrs[5].text
+        address = attrs[7].text
+        dates = re.findall(r'星期(\w)[(](\d+)-(\d+)小节[)]', date)
+        dates = self.toTime(dates)
+        addresses = []
+        temp = address.split(',')
+        for i in range(0, len(temp)):
+            if i == 0:
+                addresses.append(temp[i])
+            else:
+                if temp[i - 1] != temp[i]:
+                    addresses.append(temp[i])
+        return {
+            'name': name,
+            'teacher': teacher,
+            'address': addresses,
+            'dates': dates
+        }
+
+    @staticmethod
+    def createXlsx(data):
+        workbook = xl.Workbook()
+        sheet1 = workbook.active
+        for i in range(len(data)):
+            sheet1.append(data[i])
+        workbook.save('excel课表.xlsx')  # 保存
+
+    def parseKb(self, soup):
+        # 课程周数 begin
+        dataList = soup.find_all(class_='kbcontent1')
+        weeks = {}
+        for x in dataList:
+            xx = x.text
+            if xx.strip() == '':
+                continue
+            xx = xx.split('----')
+            temp = []
+            for x_ in xx:
+                if x_ == '':
+                    continue
+                temp.append(re.findall(r'([^-\d]+)\d', x_))
+                t = re.findall(r'(\d+)[,(-]', x_)
+                if len(t) == 2:
+                    temp[len(temp) - 1].append("{}-{}周".format(t[0], t[1]))
+                elif len(t) == 1:
+                    temp[len(temp) - 1].append(t[0] + "周")
+                else:
+                    temp[len(temp) - 1].append("{}周".format(','.join(t)))
+
+            for y in temp:
+                weeks[y[0]] = y[1]
+        # end
+        # 课程信息 begin
+        dataList = soup.find(id='dataList')
+        kc = dataList.find_all('tr')
+        kc = kc[1:]
+        data = [[''] * 8 for _ in range(14)]
+        for x in kc:
+            temp = self.parseKc(x)
+            for x in temp['dates']:
+                for i in range(x[1], x[2] + 1):
+                    if i > 13:
+                        continue
+                    t = data[i]
+                    if t[x[0]] == '':
+                        t[x[0]] = "{}[{}][{}][{}]".format(temp['name'], temp['teacher'], ']['.join(temp['address']),
+                                                          weeks[temp['name']])
+                    else:
+                        t[x[0]] += ",{}[{}][{}][{}]".format(temp['name'], temp['teacher'], ']['.join(temp['address']),
+                                                            weeks[temp['name']])
+            pass
+        # end
+        return data

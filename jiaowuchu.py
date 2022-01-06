@@ -387,7 +387,7 @@ class kc:
         with tab('tab3', label='选课', parent='bar'):  # 课程名 老师 时间 编号 学分 代号 学时 周次 地点 0 1 2 8 7 4
             add_input_text('first', default_value='20210823', label='本学期第一周第一天', )
             add_input_text('pre', default_value='30', label='提前提醒时间')
-            add_button('print', label='课表生成日历', callback=self.printf,
+            add_button('printIcs', label='课表生成日历', callback=self.printfIcs,
                        callback_data=[get_value('first'), get_value('pre')])
             add_input_int('timer', label='设置定时选课时间(几分钟后)')
             add_input_int('kc_type', label='输入课程信息类别（1课程名-教师名 2课程号）')
@@ -485,7 +485,7 @@ class kc:
 
     # 生成日历文件
 
-    def printf(self, sender, data):
+    def printfIcs(self, sender, data):
         self.write_rili()
         from print_tool import GenerateCal
         process = GenerateCal(self.rili)
@@ -501,10 +501,11 @@ class cj:
     plot_x = -1
 
     def __init__(self, s: object):
+        self.s = s
         self.sumxf = []
         self.list_n = []  # 用于计算的成绩序号
         self.zb_cha = [0]  # 理论占比-实际占比
-        self.rr = s.get(url=self.url, headers=heard1)
+        self.rr = self.s.get(url=self.url, headers=heard1)
         soup = BeautifulSoup(replace_luoma(self.rr.text, 0), 'html.parser')
         list1 = soup.find('table', class_='Nsb_r_list Nsb_table')
         list2 = list1.find_all('tr')
@@ -671,10 +672,20 @@ class cj:
             draw_text('D', [(p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2], self.list_cj[i][3], size=20)
             i += 1
 
+    # 生成excel文件
+
+    def printfXlsx(self, sender, data):
+        url_kb = url_3 + '/njlgdx/xskb/xskb_list.do'
+        r = self.s.get(url=url_kb, headers=heard2)
+        soup = BeautifulSoup(r.text, 'html.parser')
+        from print_tool import CreateExcel
+        CreateExcel(soup=soup)
+
     def paint(self):
         # 序号 开学学期 课程编号 课程名称 成绩 成绩标识 学分 总学时 考核方式 课程属性 课程性质 是否选中
         # 0    1      2       3      4   5 （删除）      6   7     8       9      10      11
         with tab('tab2', label="考试成绩", parent='bar'):
+            add_button('printXlsx', label='课表生成excel', callback=self.printfXlsx)
             self.list_n.append([])
             self.list_n.append([x for x in range(1, len(self.list_cj))])
             re1 = self.toavg(self.list_n[1])
